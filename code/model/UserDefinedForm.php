@@ -558,23 +558,37 @@ JS
 							
 							// is this field a special option field
 							$checkboxField = false;
+							$radioField = false;
 							if(in_array($formFieldWatch->ClassName, array('EditableCheckboxGroupField', 'EditableCheckbox'))) {
 								$action = "click";
 								$checkboxField = true;
 							}
+							else if ($formFieldWatch->ClassName == "EditableRadioField") {
+								$radioField = true;
+							}
 							
+							// Escape the values.
+							$dependency['Value'] = str_replace('"', '\"', $dependency['Value']);
+
 							// and what should we evaluate
 							switch($dependency['ConditionOption']) {
 								case 'IsNotBlank':
-									$expression = ($checkboxField) ? '$(this).attr("checked")' :'$(this).val() != ""';
+									$expression = ($checkboxField || $radioField) ? '$(this).attr("checked")' :'$(this).val() != ""';
 
 									break;
 								case 'IsBlank':
-									$expression = ($checkboxField) ? '!($(this).attr("checked"))' : '$(this).val() == ""';
+									$expression = ($checkboxField || $radioField) ? '!($(this).attr("checked"))' : '$(this).val() == ""';
 									
 									break;
 								case 'HasValue':
-									$expression = ($checkboxField) ? '$(this).attr("checked")' : '$(this).val() == "'. $dependency['Value'] .'"';
+									if ($checkboxField) {
+										$expression = '$(this).attr("checked")';
+									} else if ($radioField) {
+										// We cannot simply get the value of the radio group, we need to find the checked option first.
+										$expression = '$(this).parents(".field").find("input:checked").val()=="'. $dependency['Value'] .'"';
+									} else {
+										$expression = '$(this).val() == "'. $dependency['Value'] .'"';
+									}
 
 									break;
 								case 'ValueLessThan':
@@ -593,8 +607,15 @@ JS
 									$expression = '$(this).val() >= parseFloat("'. $dependency['Value'] .'")';
 
 									break;	
-								default:
-									$expression = ($checkboxField) ? '!($(this).attr("checked"))' : '$(this).val() != "'. $dependency['Value'] .'"';
+								default: // ==HasNotValue
+									if ($checkboxField) {
+										$expression = '!$(this).attr("checked")';
+									} else if ($radioField) {
+										// We cannot simply get the value of the radio group, we need to find the checked option first.
+										$expression = '$(this).parents(".field").find("input:checked").val()!="'. $dependency['Value'] .'"';
+									} else {
+										$expression = '$(this).val() != "'. $dependency['Value'] .'"';
+									}
 								
 									break;
 							}
