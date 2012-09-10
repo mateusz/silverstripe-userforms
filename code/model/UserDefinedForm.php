@@ -527,14 +527,21 @@ JS
 							// watch out for multiselect options - radios and check boxes
 							if(is_a($formFieldWatch, 'EditableDropdown')) {
 								$fieldToWatch = "$(\"select[name='".$dependency['ConditionField']."']\")";	
+								$fieldToWatchOnLoad = $fieldToWatch;
 							}
-							
 							// watch out for checkboxs as the inputs don't have values but are 'checked
 							else if(is_a($formFieldWatch, 'EditableCheckboxGroupField')) {
 								$fieldToWatch = "$(\"input[name='".$dependency['ConditionField']."[".$dependency['Value']."]']\")";
+								$fieldToWatchOnLoad = $fieldToWatch;
+							}
+							else if(is_a($formFieldWatch, 'EditableRadioField')) {
+								$fieldToWatch = "$(\"input[name='".$dependency['ConditionField']."']\")";
+								// We only want to trigger on load once for the radio group - hence we focus on the first option only.
+								$fieldToWatchOnLoad = "$(\"input[name='".$dependency['ConditionField']."']:first\")";
 							}
 							else {
-								$fieldToWatch = "$(\"input[name='".$dependency['ConditionField']."']\")";		
+								$fieldToWatch = "$(\"input[name='".$dependency['ConditionField']."']\")";
+								$fieldToWatchOnLoad = $fieldToWatch;
 							}
 							
 							// show or hide?
@@ -591,15 +598,28 @@ JS
 								
 									break;
 							}
-							// put it all together
-							$rules .= $fieldToWatch.".$action(function() {
-								if(". $expression ." ) {
-									$(\"#". $fieldId ."\").".$view."();
-								}
-								else {
-									$(\"#". $fieldId ."\").".$opposite."();
-								}
+
+							// Register conditional behaviour with an element, so it can be triggered from many places.
+							$rules .= $fieldToWatch.".each(function() {
+								$(this).data('userformConditions', function() {
+									if(". $expression ." ) {
+										$(\"#". $fieldId ."\").".$view."();
+									}
+									else {
+										$(\"#". $fieldId ."\").".$opposite."();
+									}
+								});
 							});";
+
+							// Trigger update on element changes.
+							$rules .= $fieldToWatch.".$action(function() {
+								$(this).data('userformConditions').call(this);
+							});\n";
+
+							// Trigger update on load (if server-side validation fails some fields will have different values than defaults).
+							$rules .= $fieldToWatchOnLoad.".each(function() {
+								$(this).data('userformConditions').call(this);
+							});\n";
 						}
 					}
 				}
@@ -609,9 +629,9 @@ JS
 		Requirements::customScript(<<<JS
 			(function($) {
 				$(document).ready(function() {
-					$rules
-					
 					$default
+
+					$rules
 				})
 			})(jQuery);
 JS
