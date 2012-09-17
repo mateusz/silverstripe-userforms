@@ -477,6 +477,7 @@ class UserDefinedForm_Controller extends Page_Controller {
 		$messages = $this->array2json($messages);
 		
 		// set the custom script for this form
+		/*
 		Requirements::customScript(<<<JS
 			(function($) {
 				$(document).ready(function() {
@@ -500,6 +501,7 @@ class UserDefinedForm_Controller extends Page_Controller {
 			})(jQuery);
 JS
 , 'UserFormsValidation');
+		 */
 		
 		$this->extend('updateRequiredFields', $required);
 		
